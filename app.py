@@ -35,7 +35,6 @@ def download_nltk_data():
         else:
             ssl._create_default_https_context = _create_unverified_https_context
         nltk.download('punkt', quiet=True)
-        nltk.download('punkt_tab', quiet=True)
         nltk.download('stopwords', quiet=True)
         nltk.download('averaged_perceptron_tagger', quiet=True)
         return True
@@ -65,111 +64,44 @@ class ResumeAnalyzer:
     def __init__(self):
         self.nlp = load_spacy_model()
         nltk_success = download_nltk_data()
-        # Set up stopwords
         try:
             self.stop_words = set(stopwords.words('english'))
         except:
-            self.stop_words = set(['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'about', 'against', 'between', 'into', 'through', 'during', 'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how', 'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other', 'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so', 'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don', 'should', 'now'])
+            self.stop_words = set([
+                'i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you',
+                'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his',
+                'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself',
+                'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which',
+                'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are',
+                'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having',
+                'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if',
+                'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for',
+                'with', 'about', 'against', 'between', 'into', 'through', 'during',
+                'before', 'after', 'above', 'below', 'to', 'from', 'up', 'down',
+                'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further',
+                'then', 'once', 'here', 'there', 'when', 'where', 'why', 'how',
+                'all', 'any', 'both', 'each', 'few', 'more', 'most', 'other',
+                'some', 'such', 'no', 'nor', 'not', 'only', 'own', 'same', 'so',
+                'than', 'too', 'very', 's', 't', 'can', 'will', 'just', 'don',
+                'should', 'now'
+            ])
+        # ... rest of your initialization code (roles, technical_skills, etc.)
 
-        # Available roles for analysis
-        self.available_roles = {
-            'Software Engineer': {
-                'skills': ['python', 'java', 'javascript', 'react', 'sql', 'git', 'aws', 'docker', 'kubernetes', 'typescript'],
-                'description': 'Full-stack software development role'
-            },
-            'Data Scientist': {
-                'skills': ['python', 'r', 'sql', 'machine learning', 'pandas', 'numpy', 'tensorflow', 'scikit-learn', 'tableau', 'jupyter'],
-                'description': 'Data analysis and machine learning role'
-            },
-            'DevOps Engineer': {
-                'skills': ['docker', 'kubernetes', 'aws', 'jenkins', 'terraform', 'ansible', 'linux', 'git', 'ci/cd', 'monitoring'],
-                'description': 'Infrastructure and deployment automation role'
-            },
-            'Frontend Developer': {
-                'skills': ['javascript', 'react', 'vue', 'angular', 'html', 'css', 'typescript', 'webpack', 'sass', 'bootstrap'],
-                'description': 'User interface development role'
-            },
-            'Backend Developer': {
-                'skills': ['python', 'java', 'node.js', 'sql', 'mongodb', 'rest api', 'microservices', 'docker', 'aws', 'redis'],
-                'description': 'Server-side development role'
-            },
-            'Product Manager': {
-                'skills': ['analytics', 'project management', 'user research', 'sql', 'agile', 'scrum', 'a/b testing', 'roadmap', 'stakeholder management'],
-                'description': 'Product strategy and management role'
-            },
-            'Data Analyst': {
-                'skills': ['sql', 'excel', 'python', 'tableau', 'power bi', 'statistics', 'data visualization', 'etl', 'dashboards'],
-                'description': 'Business intelligence and reporting role'
-            },
-            'Cloud Architect': {
-                'skills': ['aws', 'azure', 'gcp', 'kubernetes', 'terraform', 'microservices', 'security', 'networking', 'serverless'],
-                'description': 'Cloud infrastructure design role'
-            },
-            'Mobile Developer': {
-                'skills': ['react native', 'flutter', 'swift', 'kotlin', 'android', 'ios', 'mobile ui/ux', 'app store', 'firebase'],
-                'description': 'Mobile application development role'
-            },
-            'QA Engineer': {
-                'skills': ['selenium', 'junit', 'pytest', 'automation testing', 'manual testing', 'api testing', 'performance testing', 'bug tracking'],
-                'description': 'Quality assurance and testing role'
-            },
-            'UI/UX Designer': {
-                'skills': ['figma', 'sketch', 'adobe xd', 'user research', 'wireframing', 'prototyping', 'user testing', 'design systems'],
-                'description': 'User experience and interface design role'
-            },
-            'Marketing Manager': {
-                'skills': ['digital marketing', 'analytics', 'seo', 'social media', 'content marketing', 'email marketing', 'ppc', 'conversion optimization'],
-                'description': 'Marketing strategy and execution role'
-            },
-            'Financial Analyst': {
-                'skills': ['excel', 'sql', 'financial modeling', 'python', 'tableau', 'accounting', 'budgeting', 'forecasting', 'risk analysis'],
-                'description': 'Financial analysis and reporting role'
-            },
-            'Business Analyst': {
-                'skills': ['requirements analysis', 'process improvement', 'stakeholder management', 'documentation', 'agile', 'sql', 'project management'],
-                'description': 'Business process analysis role'
-            },
-            'Cybersecurity Analyst': {
-                'skills': ['network security', 'penetration testing', 'incident response', 'risk assessment', 'compliance', 'security tools', 'threat analysis'],
-                'description': 'Information security role'
-            }
-        }
+    def extract_text_from_pdf(self, file):
+        reader = PyPDF2.PdfReader(file)
+        text = ''
+        for page in reader.pages:
+            text += page.extract_text() + '\n'
+        return text
 
-        # Common technical skills database
-        self.technical_skills = {
-            'Programming Languages': ['python', 'java', 'javascript', 'c++', 'c#', 'php', 'ruby', 'swift', 'kotlin', 'go', 'rust', 'scala', 'r', 'matlab', 'sql', 'html', 'css', 'typescript'],
-            'Frameworks': ['react', 'angular', 'vue', 'django', 'flask', 'spring', 'express', 'laravel', 'rails', 'bootstrap', 'jquery', 'node.js', 'next.js', 'vue.js'],
-            'Databases': ['mysql', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'oracle', 'sqlite', 'cassandra', 'dynamodb', 'firebase'],
-            'Cloud Platforms': ['aws', 'azure', 'gcp', 'google cloud', 'heroku', 'digitalocean', 'cloudflare', 'netlify', 'vercel'],
-            'DevOps': ['docker', 'kubernetes', 'jenkins', 'git', 'github', 'gitlab', 'bitbucket', 'ansible', 'terraform', 'vagrant', 'ci/cd'],
-            'Data Science': ['pandas', 'numpy', 'scikit-learn', 'tensorflow', 'pytorch', 'keras', 'matplotlib', 'seaborn', 'plotly', 'tableau', 'power bi'],
-            'Mobile Development': ['android', 'ios', 'react native', 'flutter', 'xamarin', 'ionic', 'cordova'],
-            'Testing': ['selenium', 'jest', 'junit', 'pytest', 'cypress', 'postman', 'jmeter'],
-            'Web Technologies': ['rest api', 'graphql', 'soap', 'microservices', 'websockets', 'oauth', 'jwt'],
-            'Operating Systems': ['linux', 'ubuntu', 'centos', 'windows', 'macos', 'unix']
-        }
+    def extract_text_from_docx(self, file):
+        doc = docx.Document(file)
+        full_text = []
+        for para in doc.paragraphs:
+            full_text.append(para.text)
+        return '\n'.join(full_text)
 
-        self.ats_keywords = [
-            'experience', 'skills', 'education', 'qualifications', 'achievements',
-            'projects', 'certifications', 'awards', 'languages', 'interests',
-            'objective', 'summary', 'profile', 'professional', 'career',
-            'responsibilities', 'accomplishments', 'results', 'impact'
-        ]
-
-        self.industry_keywords = {
-            'Software Development': ['agile', 'scrum', 'software development', 'coding', 'programming', 'debugging', 'testing', 'deployment'],
-            'Data Science': ['machine learning', 'deep learning', 'data analysis', 'statistics', 'visualization', 'modeling', 'algorithms'],
-            'Marketing': ['digital marketing', 'seo', 'sem', 'social media', 'content marketing', 'analytics', 'campaigns'],
-            'Finance': ['financial analysis', 'accounting', 'budgeting', 'forecasting', 'risk management', 'compliance'],
-            'Healthcare': ['patient care', 'medical', 'clinical', 'healthcare', 'diagnosis', 'treatment', 'research'],
-            'Education': ['teaching', 'curriculum', 'assessment', 'learning', 'instruction', 'pedagogy', 'educational']
-        }
-    # ... rest of the class methods remain unchanged ...
-    # (No changes needed to the rest of the class)
-
-    # (Paste your other ResumeAnalyzer methods here)
-
-# ... rest of your code (main, etc.) remains unchanged except for fixing duplicate Skill Gap Analysis block and variable checks ...
+    # ... the rest of your ResumeAnalyzer methods ...
 
 def main():
     st.set_page_config(
@@ -196,16 +128,9 @@ def main():
         st.sidebar.subheader("🎯 Target Role")
         selected_role = st.sidebar.selectbox(
             "Select your target role:",
-            list(analyzer.available_roles.keys()),
+            ["Software Engineer", "Data Scientist", "DevOps Engineer", "Frontend Developer", "Backend Developer", "Product Manager", "Data Analyst", "Cloud Architect", "Mobile Developer", "QA Engineer", "UI/UX Designer", "Marketing Manager", "Financial Analyst", "Business Analyst", "Cybersecurity Analyst"],
             help="Choose the role you want to analyze against"
         )
-
-        if selected_role:
-            role_info = analyzer.available_roles[selected_role]
-            st.sidebar.info(f"**{selected_role}**\n\n{role_info['description']}")
-            with st.sidebar.expander("📋 Required Skills"):
-                for skill in role_info['skills']:
-                    st.write(f"• {skill.title()}")
 
     # Settings
     st.sidebar.subheader("⚙️ Settings")
@@ -227,10 +152,7 @@ def main():
 
         if text:
             st.success("Resume uploaded successfully!")
-            # (Rest of your main analysis code follows here as in your original file...)
-
-            # --- Remove the duplicate "Skill Gap Analysis" block ---
-
+            # (Rest of your main analysis code follows here...)
         else:
             st.error("Could not extract text from the uploaded file. Please try another file.")
 
