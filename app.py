@@ -14,7 +14,13 @@ import altair as alt
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
 # Load spaCy for NER
-nlp = spacy.load("en_core_web_sm")
+try:
+    nlp = spacy.load("en_core_web_sm")
+except:
+    import subprocess
+    subprocess.run(["python", "-m", "spacy", "download", "en_core_web_sm"])
+    nlp = spacy.load("en_core_web_sm")
+
 
 # Text preprocessing
 def clean_text(text):
