@@ -1,5 +1,6 @@
 import streamlit as st
-import pdfplumber
+import fitz  # PyMuPDF
+
 from sentence_transformers import SentenceTransformer, util
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
@@ -31,11 +32,12 @@ def clean_text(text):
 # Extract text from PDF using pdfplumber
 @st.cache_data
 def extract_text_from_pdf(uploaded_file):
-    with pdfplumber.open(uploaded_file) as pdf:
+    with fitz.open(stream=uploaded_file.read(), filetype='pdf') as doc:
         text = ''
-        for page in pdf.pages:
-            text += page.extract_text() + '\n'
+        for page in doc:
+            text += page.get_text()
     return text
+
 
 # Calculate keyword match score
 def keyword_match_score(resume_text, jd_text):
