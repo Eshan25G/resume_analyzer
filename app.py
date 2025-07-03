@@ -27,11 +27,21 @@ warnings.filterwarnings('ignore')
 @st.cache_resource
 def download_nltk_data():
     try:
+        import ssl
+        try:
+            _create_unverified_https_context = ssl._create_unverified_context
+        except AttributeError:
+            pass
+        else:
+            ssl._create_default_https_context = _create_unverified_https_context
+        
         nltk.download('punkt', quiet=True)
+        nltk.download('punkt_tab', quiet=True)
         nltk.download('stopwords', quiet=True)
         nltk.download('averaged_perceptron_tagger', quiet=True)
         return True
-    except:
+    except Exception as e:
+        st.warning(f"NLTK data download failed: {str(e)}")
         return False
 
 # Load spaCy model
@@ -39,14 +49,106 @@ def download_nltk_data():
 def load_spacy_model():
     try:
         return spacy.load("en_core_web_sm")
-    except:
-        st.warning("spaCy model not found. Some features may be limited.")
+    except OSError:
+        st.warning("⚠️ spaCy English model not found. Installing...")
+        try:
+            import subprocess
+            subprocess.check_call(["python", "-m", "spacy", "download", "en_core_web_sm"])
+            return spacy.load("en_core_web_sm")
+        except Exception as e:
+            st.error(f"Could not install spaCy model: {str(e)}")
+            return None
+    except Exception as e:
+        st.error(f"Error loading spaCy model: {str(e)}")
         return None
 
 class ResumeAnalyzer:
     def __init__(self):
         self.nlp = load_spacy_model()
-        self.stop_words = set(stopwords.words('english')) if download_nltk_data() else set()
+        nltk_success = download_nltk_data()
+        
+        if text:
+            st.success("✅ Resume uploaded successfully!")
+            
+            # Debug info
+            if show_debug:
+                st.sidebar.subheader("🔍 Debug Info")
+                st.sidebar.write(f"Text length: {len(text)} characters")
+                st.sidebar.write(f"Word count: {len(text.split())}")
+                st.sidebar.write(f"Analysis depth: {analysis_depth}")
+                
+                with st.sidebar.expander("Raw Text Preview"):
+                    st.text(text[:500] + "..." if len(text) > 500 else text) nltk_success:
+            try:
+                self.stop_words = set(stopwords.words('english'))
+            except:
+                self.stop_words = set(['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'through', 'during', 'before', 'after', 'above', 'below', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once'])
+        else:
+            self.stop_words = set(['i', 'me', 'my', 'myself', 'we', 'our', 'ours', 'ourselves', 'you', 'your', 'yours', 'yourself', 'yourselves', 'he', 'him', 'his', 'himself', 'she', 'her', 'hers', 'herself', 'it', 'its', 'itself', 'they', 'them', 'their', 'theirs', 'themselves', 'what', 'which', 'who', 'whom', 'this', 'that', 'these', 'those', 'am', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'having', 'do', 'does', 'did', 'doing', 'a', 'an', 'the', 'and', 'but', 'if', 'or', 'because', 'as', 'until', 'while', 'of', 'at', 'by', 'for', 'with', 'through', 'during', 'before', 'after', 'above', 'below', 'up', 'down', 'in', 'out', 'on', 'off', 'over', 'under', 'again', 'further', 'then', 'once'])
+        
+        # Available roles for analysis
+        self.available_roles = {
+            'Software Engineer': {
+                'skills': ['python', 'java', 'javascript', 'react', 'sql', 'git', 'aws', 'docker', 'kubernetes', 'typescript'],
+                'description': 'Full-stack software development role'
+            },
+            'Data Scientist': {
+                'skills': ['python', 'r', 'sql', 'machine learning', 'pandas', 'numpy', 'tensorflow', 'scikit-learn', 'tableau', 'jupyter'],
+                'description': 'Data analysis and machine learning role'
+            },
+            'DevOps Engineer': {
+                'skills': ['docker', 'kubernetes', 'aws', 'jenkins', 'terraform', 'ansible', 'linux', 'git', 'ci/cd', 'monitoring'],
+                'description': 'Infrastructure and deployment automation role'
+            },
+            'Frontend Developer': {
+                'skills': ['javascript', 'react', 'vue', 'angular', 'html', 'css', 'typescript', 'webpack', 'sass', 'bootstrap'],
+                'description': 'User interface development role'
+            },
+            'Backend Developer': {
+                'skills': ['python', 'java', 'node.js', 'sql', 'mongodb', 'rest api', 'microservices', 'docker', 'aws', 'redis'],
+                'description': 'Server-side development role'
+            },
+            'Product Manager': {
+                'skills': ['analytics', 'project management', 'user research', 'sql', 'agile', 'scrum', 'a/b testing', 'roadmap', 'stakeholder management'],
+                'description': 'Product strategy and management role'
+            },
+            'Data Analyst': {
+                'skills': ['sql', 'excel', 'python', 'tableau', 'power bi', 'statistics', 'data visualization', 'etl', 'dashboards'],
+                'description': 'Business intelligence and reporting role'
+            },
+            'Cloud Architect': {
+                'skills': ['aws', 'azure', 'gcp', 'kubernetes', 'terraform', 'microservices', 'security', 'networking', 'serverless'],
+                'description': 'Cloud infrastructure design role'
+            },
+            'Mobile Developer': {
+                'skills': ['react native', 'flutter', 'swift', 'kotlin', 'android', 'ios', 'mobile ui/ux', 'app store', 'firebase'],
+                'description': 'Mobile application development role'
+            },
+            'QA Engineer': {
+                'skills': ['selenium', 'junit', 'pytest', 'automation testing', 'manual testing', 'api testing', 'performance testing', 'bug tracking'],
+                'description': 'Quality assurance and testing role'
+            },
+            'UI/UX Designer': {
+                'skills': ['figma', 'sketch', 'adobe xd', 'user research', 'wireframing', 'prototyping', 'user testing', 'design systems'],
+                'description': 'User experience and interface design role'
+            },
+            'Marketing Manager': {
+                'skills': ['digital marketing', 'analytics', 'seo', 'social media', 'content marketing', 'email marketing', 'ppc', 'conversion optimization'],
+                'description': 'Marketing strategy and execution role'
+            },
+            'Financial Analyst': {
+                'skills': ['excel', 'sql', 'financial modeling', 'python', 'tableau', 'accounting', 'budgeting', 'forecasting', 'risk analysis'],
+                'description': 'Financial analysis and reporting role'
+            },
+            'Business Analyst': {
+                'skills': ['requirements analysis', 'process improvement', 'stakeholder management', 'documentation', 'agile', 'sql', 'project management'],
+                'description': 'Business process analysis role'
+            },
+            'Cybersecurity Analyst': {
+                'skills': ['network security', 'penetration testing', 'incident response', 'risk assessment', 'compliance', 'security tools', 'threat analysis'],
+                'description': 'Information security role'
+            }
+        }
         
         # Common technical skills database
         self.technical_skills = {
@@ -224,25 +326,39 @@ class ResumeAnalyzer:
 
     def generate_word_cloud(self, text: str) -> WordCloud:
         """Generate word cloud from resume text."""
-        # Clean text
-        words = word_tokenize(text.lower())
-        words = [word for word in words if word.isalnum() and word not in self.stop_words and len(word) > 2]
-        
-        if not words:
-            return None
-        
-        text_for_cloud = ' '.join(words)
-        
         try:
+            # Try to use NLTK tokenizer first
+            if download_nltk_data():
+                try:
+                    words = word_tokenize(text.lower())
+                except:
+                    # Fallback to simple split if NLTK fails
+                    words = text.lower().split()
+            else:
+                # Simple split fallback
+                words = text.lower().split()
+            
+            # Clean words
+            words = [word for word in words if word.isalnum() and word not in self.stop_words and len(word) > 2]
+            
+            if not words:
+                return None
+            
+            text_for_cloud = ' '.join(words)
+            
             wordcloud = WordCloud(
                 width=800, 
                 height=400, 
                 background_color='white',
                 colormap='viridis',
-                max_words=100
+                max_words=100,
+                relative_scaling=0.5,
+                min_font_size=10
             ).generate(text_for_cloud)
             return wordcloud
-        except:
+            
+        except Exception as e:
+            st.error(f"Error generating word cloud: {str(e)}")
             return None
 
     def match_job_description(self, resume_text: str, job_description: str) -> Dict:
@@ -250,27 +366,49 @@ class ResumeAnalyzer:
         resume_lower = resume_text.lower()
         job_lower = job_description.lower()
         
-        # Extract keywords from job description
-        job_words = set(word_tokenize(job_lower))
-        job_words = {word for word in job_words if word.isalnum() and word not in self.stop_words and len(word) > 2}
-        
-        resume_words = set(word_tokenize(resume_lower))
-        resume_words = {word for word in resume_words if word.isalnum() and word not in self.stop_words and len(word) > 2}
-        
-        # Calculate match percentage
-        common_words = job_words.intersection(resume_words)
-        match_percentage = (len(common_words) / len(job_words)) * 100 if job_words else 0
-        
-        # Missing keywords
-        missing_keywords = job_words - resume_words
-        
-        return {
-            'match_percentage': round(match_percentage, 2),
-            'common_keywords': list(common_words),
-            'missing_keywords': list(missing_keywords)[:20],  # Top 20 missing
-            'total_job_keywords': len(job_words),
-            'matched_keywords': len(common_words)
-        }
+        try:
+            # Try to use NLTK tokenizer
+            if download_nltk_data():
+                try:
+                    job_words = set(word_tokenize(job_lower))
+                    resume_words = set(word_tokenize(resume_lower))
+                except:
+                    # Fallback to simple split
+                    job_words = set(job_lower.split())
+                    resume_words = set(resume_lower.split())
+            else:
+                # Simple split fallback
+                job_words = set(job_lower.split())
+                resume_words = set(resume_lower.split())
+            
+            # Clean words
+            job_words = {word for word in job_words if word.isalnum() and word not in self.stop_words and len(word) > 2}
+            resume_words = {word for word in resume_words if word.isalnum() and word not in self.stop_words and len(word) > 2}
+            
+            # Calculate match percentage
+            common_words = job_words.intersection(resume_words)
+            match_percentage = (len(common_words) / len(job_words)) * 100 if job_words else 0
+            
+            # Missing keywords
+            missing_keywords = job_words - resume_words
+            
+            return {
+                'match_percentage': round(match_percentage, 2),
+                'common_keywords': list(common_words),
+                'missing_keywords': list(missing_keywords)[:20],  # Top 20 missing
+                'total_job_keywords': len(job_words),
+                'matched_keywords': len(common_words)
+            }
+            
+        except Exception as e:
+            st.error(f"Error in job matching: {str(e)}")
+            return {
+                'match_percentage': 0,
+                'common_keywords': [],
+                'missing_keywords': [],
+                'total_job_keywords': 0,
+                'matched_keywords': 0
+            }
 
     def detect_industry(self, text: str) -> str:
         """Detect likely industry based on resume content."""
@@ -331,11 +469,33 @@ def main():
     analyzer = ResumeAnalyzer()
     
     # Sidebar
-    st.sidebar.title("Navigation")
+    st.sidebar.title("🧭 Navigation")
     analysis_type = st.sidebar.selectbox(
         "Choose Analysis Type",
-        ["Resume Analysis", "Job Matching", "Skill Gap Analysis", "Industry Insights"]
+        ["Resume Analysis", "Job Matching", "Skill Gap Analysis", "Role Explorer", "Industry Insights"]
     )
+    
+    # Role selector in sidebar
+    if analysis_type in ["Skill Gap Analysis", "Role Explorer"]:
+        st.sidebar.subheader("🎯 Target Role")
+        selected_role = st.sidebar.selectbox(
+            "Select your target role:",
+            list(analyzer.available_roles.keys()),
+            help="Choose the role you want to analyze against"
+        )
+        
+        if selected_role:
+            role_info = analyzer.available_roles[selected_role]
+            st.sidebar.info(f"**{selected_role}**\n\n{role_info['description']}")
+            
+            with st.sidebar.expander("📋 Required Skills"):
+                for skill in role_info['skills']:
+                    st.write(f"• {skill.title()}")
+    
+    # Settings
+    st.sidebar.subheader("⚙️ Settings")
+    show_debug = st.sidebar.checkbox("Show Debug Info", value=False)
+    analysis_depth = st.sidebar.slider("Analysis Depth", 1, 3, 2, help="Higher depth = more detailed analysis")
     
     # File upload
     uploaded_file = st.file_uploader(
@@ -386,15 +546,20 @@ def main():
                     st.info(f"Predicted Level: **{exp_analysis['level'].title()}** (Confidence: {exp_analysis['confidence']})")
                     
                     # Word Cloud
-                    st.subheader("Word Cloud")
+                    st.subheader("☁️ Word Cloud")
                     wordcloud = analyzer.generate_word_cloud(text)
                     if wordcloud:
-                        fig, ax = plt.subplots(figsize=(10, 5))
-                        ax.imshow(wordcloud, interpolation='bilinear')
-                        ax.axis('off')
-                        st.pyplot(fig)
+                        try:
+                            import matplotlib.pyplot as plt
+                            fig, ax = plt.subplots(figsize=(10, 5))
+                            ax.imshow(wordcloud, interpolation='bilinear')
+                            ax.axis('off')
+                            st.pyplot(fig)
+                            plt.close(fig)
+                        except Exception as e:
+                            st.error(f"Error displaying word cloud: {str(e)}")
                     else:
-                        st.info("Unable to generate word cloud")
+                        st.info("Unable to generate word cloud - this may be due to insufficient text content")
                 
                 with tab2:
                     st.subheader("ATS Compatibility Score")
@@ -539,23 +704,164 @@ def main():
             elif analysis_type == "Skill Gap Analysis":
                 st.header("📈 Skill Gap Analysis")
                 
+                if 'selected_role' in locals():
+                    role_info = analyzer.available_roles[selected_role]
+                    required_skills = role_info['skills']
+                    
+                    current_skills = analyzer.extract_skills(text)
+                    
+                    # Flatten current skills
+                    all_current_skills = []
+                    for skill_list in current_skills.values():
+                        all_current_skills.extend([skill.lower() for skill in skill_list])
+                    
+                    # Calculate gaps
+                    missing_skills = [skill for skill in required_skills if skill not in all_current_skills]
+                    matching_skills = [skill for skill in required_skills if skill in all_current_skills]
+                    
+                    # Skill completion percentage
+                    completion_percentage = (len(matching_skills) / len(required_skills)) * 100
+                    
+                    # Display metrics
+                    col1, col2, col3 = st.columns(3)
+                    
+                    with col1:
+                        st.metric("Skills Matched", len(matching_skills))
+                    with col2:
+                        st.metric("Skills Missing", len(missing_skills))
+                    with col3:
+                        st.metric("Completion Rate", f"{completion_percentage:.1f}%")
+                    
+                    # Progress bar
+                    st.progress(completion_percentage / 100)
+                    
+                    # Skills breakdown
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.subheader("✅ Skills You Have")
+                        if matching_skills:
+                            for skill in matching_skills:
+                                st.success(f"• {skill.title()}")
+                        else:
+                            st.info("No matching skills found")
+                    
+                    with col2:
+                        st.subheader("❌ Skills to Develop")
+                        if missing_skills:
+                            for skill in missing_skills:
+                                st.error(f"• {skill.title()}")
+                        else:
+                            st.success("All skills covered!")
+                    
+                    # Recommendations
+                    st.subheader("🎯 Learning Recommendations")
+                    if missing_skills:
+                        priority_skills = missing_skills[:5]  # Top 5 priority skills
+                        st.write("**Priority Skills to Learn:**")
+                        for i, skill in enumerate(priority_skills, 1):
+                            st.write(f"{i}. **{skill.title()}** - High demand for {selected_role}")
+                    
+                    # Skill progress chart
+                    if matching_skills or missing_skills:
+                        skill_data = pd.DataFrame({
+                            'Skill': [skill.title() for skill in required_skills],
+                            'Status': ['Have' if skill in all_current_skills else 'Need' for skill in required_skills]
+                        })
+                        
+                        fig = px.histogram(
+                            skill_data, 
+                            x='Status', 
+                            title=f"Skill Status for {selected_role}",
+                            color='Status',
+                            color_discrete_map={'Have': 'green', 'Need': 'red'}
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.info("Please select a target role from the sidebar")
+            
+            elif analysis_type == "Role Explorer":
+                st.header("🔍 Role Explorer")
+                
+                if 'selected_role' in locals():
+                    role_info = analyzer.available_roles[selected_role]
+                    
+                    st.subheader(f"🎯 {selected_role}")
+                    st.write(role_info['description'])
+                    
+                    # Role requirements
+                    st.subheader("📋 Required Skills")
+                    skills_df = pd.DataFrame(role_info['skills'], columns=['Skill'])
+                    skills_df['Skill'] = skills_df['Skill'].str.title()
+                    st.dataframe(skills_df, use_container_width=True, hide_index=True)
+                    
+                    # Compare with your resume
+                    if text:
+                        st.subheader("📊 Your Match Analysis")
+                        current_skills = analyzer.extract_skills(text)
+                        
+                        # Flatten current skills
+                        all_current_skills = []
+                        for skill_list in current_skills.values():
+                            all_current_skills.extend([skill.lower() for skill in skill_list])
+                        
+                        # Calculate match
+                        matching_skills = [skill for skill in role_info['skills'] if skill in all_current_skills]
+                        match_percentage = (len(matching_skills) / len(role_info['skills'])) * 100
+                        
+                        # Match visualization
+                        match_color = "green" if match_percentage >= 70 else "orange" if match_percentage >= 50 else "red"
+                        st.markdown(f"### Match Score: <span style='color: {match_color}'>{match_percentage:.1f}%</span>", unsafe_allow_html=True)
+                        
+                        # Detailed breakdown
+                        col1, col2 = st.columns(2)
+                        
+                        with col1:
+                            st.write("**✅ Skills You Have:**")
+                            for skill in matching_skills:
+                                st.write(f"• {skill.title()}")
+                        
+                        with col2:
+                            missing_skills = [skill for skill in role_info['skills'] if skill not in all_current_skills]
+                            st.write("**❌ Skills to Develop:**")
+                            for skill in missing_skills:
+                                st.write(f"• {skill.title()}")
+                    
+                    # Role comparison
+                    st.subheader("🔄 Compare with Other Roles")
+                    
+                    # Show similar roles
+                    if text:
+                        role_matches = {}
+                        for role, info in analyzer.available_roles.items():
+                            if role != selected_role:
+                                matching = [skill for skill in info['skills'] if skill in all_current_skills]
+                                match_pct = (len(matching) / len(info['skills'])) * 100
+                                role_matches[role] = match_pct
+                        
+                        # Sort by match percentage
+                        sorted_roles = sorted(role_matches.items(), key=lambda x: x[1], reverse=True)[:5]
+                        
+                        st.write("**Top 5 Alternative Roles Based on Your Skills:**")
+                        for role, match_pct in sorted_roles:
+                            st.write(f"• **{role}**: {match_pct:.1f}% match")
+                
+                else:
+                    st.info("Please select a role from the sidebar to explore")
+            
+            elif analysis_type == "Skill Gap Analysis":
+                st.header("📈 Skill Gap Analysis")
+                
                 target_role = st.selectbox(
                     "Select target role:",
-                    ["Software Engineer", "Data Scientist", "Product Manager", "Marketing Manager", "Financial Analyst"]
+                    list(analyzer.available_roles.keys()),
+                    help="Choose the role you want to analyze against"
                 )
                 
-                # This would typically connect to a database of role requirements
-                # For demo purposes, we'll use predefined skill sets
-                role_skills = {
-                    "Software Engineer": ["python", "java", "javascript", "react", "sql", "git", "aws"],
-                    "Data Scientist": ["python", "r", "sql", "machine learning", "pandas", "numpy", "tensorflow"],
-                    "Product Manager": ["analytics", "project management", "user research", "sql", "agile"],
-                    "Marketing Manager": ["digital marketing", "analytics", "seo", "social media", "content marketing"],
-                    "Financial Analyst": ["excel", "sql", "financial modeling", "python", "tableau"]
-                }
-                
-                if target_role in role_skills:
-                    required_skills = role_skills[target_role]
+                if target_role:
+                    role_info = analyzer.available_roles[target_role]
+                    required_skills = role_info['skills']
+                    
                     current_skills = analyzer.extract_skills(text)
                     
                     # Flatten current skills
