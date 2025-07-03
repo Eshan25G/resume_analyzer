@@ -53,6 +53,60 @@ class ResumeAnalyzer:
             'experience', 'work', 'employment', 'job', 'position', 'role',
             'responsibilities', 'achievements', 'projects'
         ]
+        
+        # Job roles and their requirements
+        self.job_roles = {
+            'Software Engineer': {
+                'description': 'Develop and maintain software applications',
+                'key_skills': ['python', 'java', 'javascript', 'sql', 'git', 'problem-solving'],
+                'responsibilities': ['Write clean, maintainable code', 'Debug and troubleshoot issues', 'Collaborate with team members', 'Participate in code reviews']
+            },
+            'Data Scientist': {
+                'description': 'Analyze complex data to derive business insights',
+                'key_skills': ['python', 'pandas', 'numpy', 'sklearn', 'matplotlib', 'sql', 'analytical'],
+                'responsibilities': ['Build predictive models', 'Analyze large datasets', 'Create data visualizations', 'Present findings to stakeholders']
+            },
+            'Product Manager': {
+                'description': 'Lead product development and strategy',
+                'key_skills': ['leadership', 'analytical', 'communication', 'problem-solving', 'organized'],
+                'responsibilities': ['Define product roadmap', 'Coordinate with development teams', 'Gather user requirements', 'Analyze market trends']
+            },
+            'Frontend Developer': {
+                'description': 'Create user interfaces and web experiences',
+                'key_skills': ['html', 'css', 'javascript', 'react', 'angular', 'vue', 'creative'],
+                'responsibilities': ['Develop responsive web interfaces', 'Optimize user experience', 'Collaborate with designers', 'Ensure cross-browser compatibility']
+            },
+            'Backend Developer': {
+                'description': 'Build server-side applications and APIs',
+                'key_skills': ['python', 'java', 'nodejs', 'sql', 'mongodb', 'docker', 'problem-solving'],
+                'responsibilities': ['Design and implement APIs', 'Optimize database performance', 'Ensure system scalability', 'Implement security measures']
+            },
+            'DevOps Engineer': {
+                'description': 'Manage infrastructure and deployment pipelines',
+                'key_skills': ['aws', 'azure', 'docker', 'kubernetes', 'terraform', 'jenkins', 'analytical'],
+                'responsibilities': ['Automate deployment processes', 'Monitor system performance', 'Manage cloud infrastructure', 'Implement CI/CD pipelines']
+            },
+            'UX/UI Designer': {
+                'description': 'Design user experiences and interfaces',
+                'key_skills': ['creative', 'analytical', 'communication', 'detail-oriented', 'collaborative'],
+                'responsibilities': ['Create user-centered designs', 'Conduct user research', 'Develop prototypes', 'Collaborate with developers']
+            },
+            'Business Analyst': {
+                'description': 'Analyze business processes and requirements',
+                'key_skills': ['analytical', 'communication', 'problem-solving', 'detail-oriented', 'organized'],
+                'responsibilities': ['Gather business requirements', 'Analyze current processes', 'Recommend improvements', 'Create documentation']
+            },
+            'Marketing Manager': {
+                'description': 'Develop and execute marketing strategies',
+                'key_skills': ['communication', 'creative', 'analytical', 'leadership', 'organized'],
+                'responsibilities': ['Develop marketing campaigns', 'Analyze market trends', 'Manage marketing budget', 'Coordinate with sales teams']
+            },
+            'Cybersecurity Analyst': {
+                'description': 'Protect organizations from security threats',
+                'key_skills': ['analytical', 'detail-oriented', 'problem-solving', 'communication', 'adaptable'],
+                'responsibilities': ['Monitor security systems', 'Investigate security incidents', 'Implement security measures', 'Conduct risk assessments']
+            }
+        }
 
     def extract_text_from_pdf(self, pdf_file):
         """Extract text from PDF file"""
@@ -150,6 +204,99 @@ class ResumeAnalyzer:
         words = word_tokenize(text.lower())
         words = [word for word in words if word.isalpha() and word not in self.stop_words]
         return Counter(words)
+    
+    def calculate_job_match(self, resume_skills, job_role):
+        """Calculate how well resume matches a job role"""
+        if job_role not in self.job_roles:
+            return 0, []
+        
+        required_skills = self.job_roles[job_role]['key_skills']
+        
+        # Flatten resume skills
+        all_resume_skills = []
+        for category_skills in resume_skills['technical'].values():
+            all_resume_skills.extend(category_skills)
+        all_resume_skills.extend(resume_skills['soft'])
+        
+        # Calculate match
+        matched_skills = []
+        for skill in required_skills:
+            if skill in all_resume_skills:
+                matched_skills.append(skill)
+        
+        match_percentage = (len(matched_skills) / len(required_skills)) * 100
+        missing_skills = [skill for skill in required_skills if skill not in matched_skills]
+        
+        return match_percentage, missing_skills, matched_skills
+    
+    def extract_name_from_resume(self, text):
+        """Extract name from resume text (simple heuristic)"""
+        lines = text.split('\n')
+        # Usually name is in the first few lines
+        for line in lines[:5]:
+            line = line.strip()
+            # Look for lines that might contain names (not email, phone, etc.)
+            if line and not any(char in line for char in ['@', 'http', '+', '(', ')', '-']) and len(line.split()) <= 3:
+                words = line.split()
+                if len(words) >= 2 and all(word.isalpha() for word in words):
+                    return ' '.join(words)
+        return "Your Name"
+    
+    def generate_cover_letter(self, name, job_role, company_name, resume_skills, resume_text):
+        """Generate a personalized cover letter"""
+        if job_role not in self.job_roles:
+            return "Invalid job role selected."
+        
+        job_info = self.job_roles[job_role]
+        match_percentage, missing_skills, matched_skills = self.calculate_job_match(resume_skills, job_role)
+        
+        # Extract some experience/achievements from resume
+        experience_keywords = ['led', 'managed', 'developed', 'implemented', 'created', 'improved', 'increased', 'achieved']
+        experience_sentences = []
+        sentences = re.split(r'[.!?]+', resume_text)
+        
+        for sentence in sentences:
+            if any(keyword in sentence.lower() for keyword in experience_keywords):
+                clean_sentence = sentence.strip()
+                if len(clean_sentence) > 20 and len(clean_sentence) < 150:
+                    experience_sentences.append(clean_sentence)
+        
+        # Select top 2 experience sentences
+        relevant_experience = experience_sentences[:2] if experience_sentences else []
+        
+        # Generate cover letter
+        cover_letter = f"""Dear Hiring Manager,
+
+I am writing to express my strong interest in the {job_role} position at {company_name}. With my background in technology and proven track record of success, I am excited about the opportunity to contribute to your team.
+
+"""
+        
+        # Add skills paragraph
+        if matched_skills:
+            skills_text = ', '.join(matched_skills[:5])  # Top 5 matched skills
+            cover_letter += f"My technical expertise includes {skills_text}, which aligns well with the requirements for this role. "
+        
+        cover_letter += f"I am particularly drawn to this position because it allows me to {job_info['description'].lower()} and contribute to meaningful projects.\n\n"
+        
+        # Add experience paragraph
+        if relevant_experience:
+            cover_letter += "In my previous roles, I have:\n"
+            for exp in relevant_experience:
+                cover_letter += f"• {exp.strip()}\n"
+            cover_letter += "\n"
+        
+        # Add responsibilities paragraph
+        cover_letter += f"I am excited about the opportunity to {', '.join(job_info['responsibilities'][:3]).lower()} at {company_name}. "
+        
+        # Add closing
+        cover_letter += f"""My passion for technology and commitment to excellence make me a strong candidate for this position.
+
+Thank you for considering my application. I look forward to discussing how my skills and experience can contribute to {company_name}'s continued success.
+
+Sincerely,
+{name}"""
+        
+        return cover_letter
 
 def main():
     st.set_page_config(page_title="Resume Analyzer", page_icon="📄", layout="wide")
@@ -177,9 +324,9 @@ def main():
         
         if text:
             # Create tabs for different analyses
-            tab1, tab2, tab3, tab4, tab5 = st.tabs([
+            tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
                 "📊 Overview", "🎯 Skills Analysis", "📞 Contact Info", 
-                "📈 Word Frequency", "💡 Recommendations"
+                "📈 Word Frequency", "💼 Job Match", "✍️ Cover Letter"
             ])
             
             with tab1:
@@ -317,54 +464,229 @@ def main():
                     st.dataframe(freq_df, use_container_width=True)
             
             with tab5:
-                st.header("Recommendations")
+                st.header("Job Role Matching")
                 
-                recommendations = []
+                # Job role selection
+                st.subheader("Select Target Job Role")
+                selected_job = st.selectbox(
+                    "Choose a job role to analyze compatibility:",
+                    list(analyzer.job_roles.keys())
+                )
                 
-                # Check contact info
-                if not contact_info['emails']:
-                    recommendations.append("✉️ Add an email address to your resume")
-                if not contact_info['phones']:
-                    recommendations.append("📞 Include a phone number for easy contact")
-                if not contact_info['linkedin']:
-                    recommendations.append("💼 Add your LinkedIn profile URL")
+                if selected_job:
+                    job_info = analyzer.job_roles[selected_job]
+                    
+                    # Display job information
+                    st.write(f"**Job Description:** {job_info['description']}")
+                    st.write(f"**Key Skills Required:** {', '.join(job_info['key_skills'])}")
+                    
+                    # Calculate match
+                    match_percentage, missing_skills, matched_skills = analyzer.calculate_job_match(skills, selected_job)
+                    
+                    # Display match results
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        st.metric("Match Percentage", f"{match_percentage:.1f}%")
+                        
+                        # Match gauge
+                        fig = go.Figure(go.Indicator(
+                            mode = "gauge+number",
+                            value = match_percentage,
+                            domain = {'x': [0, 1], 'y': [0, 1]},
+                            title = {'text': "Job Match Score"},
+                            gauge = {
+                                'axis': {'range': [None, 100]},
+                                'bar': {'color': "darkgreen"},
+                                'steps': [
+                                    {'range': [0, 40], 'color': "lightgray"},
+                                    {'range': [40, 70], 'color': "yellow"},
+                                    {'range': [70, 100], 'color': "lightgreen"}
+                                ]
+                            }
+                        ))
+                        st.plotly_chart(fig, use_container_width=True)
+                    
+                    with col2:
+                        if matched_skills:
+                            st.subheader("✅ Matched Skills")
+                            for skill in matched_skills:
+                                st.write(f"• {skill}")
+                        
+                        if missing_skills:
+                            st.subheader("❌ Missing Skills")
+                            for skill in missing_skills:
+                                st.write(f"• {skill}")
+                        
+                        # Improvement suggestions
+                        if missing_skills:
+                            st.subheader("💡 Suggestions")
+                            st.write("Consider adding these skills to improve your match:")
+                            for skill in missing_skills[:3]:  # Top 3 missing skills
+                                st.write(f"🎯 Learn {skill}")
+                    
+                    # Key responsibilities
+                    st.subheader("Key Responsibilities")
+                    for responsibility in job_info['responsibilities']:
+                        st.write(f"• {responsibility}")
+            
+            with tab6:
+                st.header("Cover Letter Generator")
                 
-                # Check skills
-                total_skills = sum(len(skills_list) for skills_list in skills['technical'].values())
-                if total_skills < 5:
-                    recommendations.append("🔧 Add more technical skills relevant to your field")
+                # Input fields for cover letter
+                col1, col2 = st.columns(2)
                 
-                if len(skills['soft']) < 3:
-                    recommendations.append("🤝 Include more soft skills (leadership, communication, etc.)")
+                with col1:
+                    # Extract name from resume
+                    extracted_name = analyzer.extract_name_from_resume(text)
+                    user_name = st.text_input("Your Name", value=extracted_name)
                 
-                # Check resume length
-                word_count = len(text.split())
-                if word_count < 200:
-                    recommendations.append("📝 Your resume seems short. Consider adding more details about your experience")
-                elif word_count > 800:
-                    recommendations.append("✂️ Your resume might be too long. Consider condensing it")
+                with col2:
+                    company_name = st.text_input("Company Name", placeholder="e.g., Google, Microsoft")
                 
-                # Display recommendations
-                if recommendations:
-                    st.subheader("Areas for Improvement")
-                    for rec in recommendations:
-                        st.write(f"• {rec}")
-                else:
-                    st.success("🎉 Great job! Your resume looks comprehensive.")
+                # Job role selection for cover letter
+                cover_letter_job = st.selectbox(
+                    "Select Job Role for Cover Letter:",
+                    list(analyzer.job_roles.keys()),
+                    key="cover_letter_job"
+                )
                 
-                # General tips
-                st.subheader("General Tips")
-                tips = [
-                    "Use action verbs to describe your experience",
-                    "Quantify your achievements with numbers when possible",
-                    "Tailor your resume to each job application",
-                    "Keep formatting consistent throughout",
-                    "Proofread for spelling and grammar errors",
-                    "Use bullet points for easy readability"
-                ]
+                # Generate cover letter button
+                if st.button("Generate Cover Letter", type="primary"):
+                    if user_name and company_name and cover_letter_job:
+                        cover_letter = analyzer.generate_cover_letter(
+                            user_name, cover_letter_job, company_name, skills, text
+                        )
+                        
+                        st.subheader("📄 Generated Cover Letter")
+                        st.text_area("Cover Letter", cover_letter, height=400)
+                        
+                        # Download button
+                        st.download_button(
+                            label="Download Cover Letter",
+                            data=cover_letter,
+                            file_name=f"{user_name.replace(' ', '_')}_cover_letter_{cover_letter_job.replace(' ', '_')}.txt",
+                            mime="text/plain"
+                        )
+                        
+                        # Match analysis for cover letter
+                        match_percentage, missing_skills, matched_skills = analyzer.calculate_job_match(skills, cover_letter_job)
+                        
+                        st.subheader("📊 Cover Letter Analysis")
+                        col1, col2, col3 = st.columns(3)
+                        
+                        with col1:
+                            st.metric("Job Match", f"{match_percentage:.1f}%")
+                        
+                        with col2:
+                            st.metric("Skills Highlighted", len(matched_skills))
+                        
+                        with col3:
+                            word_count = len(cover_letter.split())
+                            st.metric("Word Count", word_count)
+                        
+                        # Recommendations for cover letter
+                        st.subheader("💡 Cover Letter Tips")
+                        tips = [
+                            "Customize the cover letter for each application",
+                            "Research the company and mention specific details",
+                            "Quantify your achievements with numbers",
+                            "Keep it concise (1 page maximum)",
+                            "Use the same font and formatting as your resume"
+                        ]
+                        
+                        for tip in tips:
+                            st.write(f"• {tip}")
+                        
+                    else:
+                        st.warning("Please fill in all required fields (Name, Company, Job Role)")
                 
-                for tip in tips:
-                    st.write(f"💡 {tip}")
+                # Sample cover letters section
+                st.subheader("📝 Cover Letter Best Practices")
+                
+                best_practices = {
+                    "Structure": [
+                        "Header with your contact information",
+                        "Date and employer's contact information",
+                        "Professional greeting",
+                        "Opening paragraph with position and interest",
+                        "Body paragraphs highlighting relevant experience",
+                        "Closing paragraph with call to action",
+                        "Professional sign-off"
+                    ],
+                    "Content Tips": [
+                        "Address the hiring manager by name when possible",
+                        "Mention how you learned about the position",
+                        "Highlight 2-3 key achievements that match the job",
+                        "Show enthusiasm for the company and role",
+                        "Include keywords from the job description",
+                        "End with a strong call to action"
+                    ],
+                    "Common Mistakes": [
+                        "Using a generic template for all applications",
+                        "Repeating everything from your resume",
+                        "Being too long or too short",
+                        "Focusing on what you want vs. what you can offer",
+                        "Poor grammar or spelling errors",
+                        "Forgetting to customize company/position names"
+                    ]
+                }
+                
+                for category, items in best_practices.items():
+                    with st.expander(f"📋 {category}"):
+                        for item in items:
+                            st.write(f"• {item}")
+            
+            # Move recommendations to a separate section
+            st.header("💡 Overall Recommendations")
+            
+            recommendations = []
+            
+            # Check contact info
+            contact_info = analyzer.extract_contact_info(text)
+            if not contact_info['emails']:
+                recommendations.append("✉️ Add an email address to your resume")
+            if not contact_info['phones']:
+                recommendations.append("📞 Include a phone number for easy contact")
+            if not contact_info['linkedin']:
+                recommendations.append("💼 Add your LinkedIn profile URL")
+            
+            # Check skills
+            total_skills = sum(len(skills_list) for skills_list in skills['technical'].values())
+            if total_skills < 5:
+                recommendations.append("🔧 Add more technical skills relevant to your field")
+            
+            if len(skills['soft']) < 3:
+                recommendations.append("🤝 Include more soft skills (leadership, communication, etc.)")
+            
+            # Check resume length
+            word_count = len(text.split())
+            if word_count < 200:
+                recommendations.append("📝 Your resume seems short. Consider adding more details about your experience")
+            elif word_count > 800:
+                recommendations.append("✂️ Your resume might be too long. Consider condensing it")
+            
+            # Display recommendations
+            if recommendations:
+                st.subheader("Areas for Improvement")
+                for rec in recommendations:
+                    st.write(f"• {rec}")
+            else:
+                st.success("🎉 Great job! Your resume looks comprehensive.")
+            
+            # General tips
+            st.subheader("General Tips")
+            tips = [
+                "Use action verbs to describe your experience",
+                "Quantify your achievements with numbers when possible",
+                "Tailor your resume to each job application",
+                "Keep formatting consistent throughout",
+                "Proofread for spelling and grammar errors",
+                "Use bullet points for easy readability"
+            ]
+            
+            for tip in tips:
+                st.write(f"💡 {tip}")
     
     else:
         st.info("👆 Please upload a resume file to get started!")
@@ -376,7 +698,8 @@ def main():
             "🎯 **Skills Analysis**: Detects technical and soft skills",
             "📞 **Contact Info**: Extracts email, phone, and LinkedIn",
             "📈 **Word Frequency**: Shows most common words used",
-            "💡 **Recommendations**: Provides improvement suggestions"
+            "💼 **Job Match**: Analyzes compatibility with specific job roles",
+            "✍️ **Cover Letter**: Generates personalized cover letters"
         ]
         
         for feature in features:
