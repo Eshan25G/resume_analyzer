@@ -1,6 +1,9 @@
 streamlit
-PyPDF2
-sentence-transformers
-matplotlib
-wordcloud
-torch
+pdfplumber==0.10.3
+sentence-transformers==2.2.2
+matplotlib==3.8.0
+wordcloud==1.9.3
+torch==2.2.0
+spacy==3.7.2
+altair==5.3.0
+
